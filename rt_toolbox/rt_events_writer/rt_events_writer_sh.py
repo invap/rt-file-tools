@@ -18,6 +18,23 @@ from rt_toolbox.logging_configuration import (
 from rt_rabbitmq_wrapper.rabbitmq_utility import (
     RabbitMQError
 )
+from rt_rabbitmq_wrapper.exchange_types.event import (
+    event_protobuf
+)
+
+from rt_rabbitmq_wrapper.exchange_types.event.event_pb2 import (
+    Event as PB_Event,
+    TaskStartedEvent as PB_TaskStartedEvent,
+    TaskFinishedEvent as PB_TaskFinishedEvent,
+    CheckpointReachedEvent as PB_CheckpointReachedEvent,
+    VariableValueAssignedEvent as PB_VariableValueAssignedEvent,
+    ClockPauseEvent as PB_ClockPauseEvent,
+    ClockResetEvent as PB_ClockResetEvent,
+    ClockResumeEvent as PB_ClockResumeEvent,
+    ClockStartEvent as PB_ClockStartEvent,
+    ComponentEvent as PB_ComponentEvent
+)
+
 from rt_toolbox.rt_events_writer import rabbitmq_server_connections
 from rt_toolbox.utility import (
     is_valid_file_with_extension_nex,
@@ -160,11 +177,13 @@ def main():
                     else:
                         last_message_time = time.time()
                         # Event received
-                        event = body.decode()
+                        pb_event = PB_Event()
+                        pb_event.ParseFromString(body)
+                        event = event_protobuf.protobuf_to_event(pb_event)
                         # Log event reception
                         logger.debug(f"Event received: {event}.")
                         # Write event in the output file
-                        output_file.write(event+'\n')
+                        output_file.write(event.serialized()+'\n')
                         output_file.flush()
                         # Only increment number_of_events is it is a valid event (rules out poisson pill)
                         number_of_events += 1
